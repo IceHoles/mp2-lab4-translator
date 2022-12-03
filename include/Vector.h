@@ -111,7 +111,7 @@ public:
 	}
 
 	// test purposes  
-	size_t get_size() const noexcept{
+	size_t size() const noexcept{
 		return size;
 	}
 
