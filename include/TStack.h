@@ -30,10 +30,9 @@ public:
         return mem[mem.get_size() - 1];
     }
 
-    T pop() {
+    void pop() {
         if (empty())
             throw std::out_of_range("Stack is empty\n");
         mem.pop_back();
-        return mem[mem.get_size()];
     }
 };
