@@ -4,69 +4,60 @@
 #include <string>
 #include <map>
 
-template <typename T>
+
 class Translator {
 	std::string infix;
-	enum lexemType { number, operation, bracket_open, bracket_close, variable, begin };
-	Vector<pair<lexemType, std::string>> lexems;
-	Vector<pair<lexemType, std::string>> postfix;
-	std::map <std::string, int> priority;
-	std::map<std::string, T>  variables;
+	enum lexemType { number, operation, bracket_open, bracket_close, word, begin };
+	Vector<std::pair<lexemType, std::string>> lexems;
+	Vector<std::pair<lexemType, std::string>> postfix;
+	std::map<std::string, int> priority = { {"+", 1}, {"-", 1}, {"*", 2}, {"/", 2} };
+	std::map<std::string, double> variables;
 
 	void Parse() {
-		enum lexemType { number, operation, bracket_open, bracket_close, word, begin };
 		lexemType l = begin;
 		int n = 0;
 		int brackets = 0;
 		for (int i = 0; i < infix.size(); i++) {
 			char c = infix[i];
-			if (c == ' ') continue;
+			if (c == ' ')  continue;  // this ruins a lot of cases but still
 			switch (l) {
 			case (begin):
 				if (c == '(') {
 					l = bracket_open;
 				}
-				else if (digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '.' || c == '-') {
 					l = number;
 				}
-				else if (letter(c)) {
+				else if (Letter(c)) {
 					l = word;
 				}
 				else throw std::invalid_argument("L user");
 				break;
 			case(number):
-				if (c == '.' || digit(c))
+				if (c == '.' || Digit(c))
 					continue;
-				std::string lexem(i - n);
-				for (int j = 0; j < i - n - 1; j++) {
-					lexem[j] = infix[n + j];
-				}
-				lexems.push_back({ number, lexem });
+				lexems.push_back({ number, infix.substr(n, i - n) });
 				if (c == ')') {
 					n = i;
 					l = bracket_close;
 				}
-				else if (operation(c)) {
+				else if (Operation(c)) {
 					n = i;
 					l = operation;
 				}
 				else throw std::invalid_argument("L user");
 				break;
 			case(operation):
-				std::string lexem(i - n);
-				for (int j = 0; j < i - n - 1; j++) {
-					lexem[j] = infix[n + j];
-				}
-				lexems.push_back({ operation, lexem });
+				lexems.push_back({ operation, infix.substr(n, i - n) });
 				if (c == '(') {
 					n = i;
 					l = bracket_open;
 				}
-				else if (digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '.' || c == '-') {
 					n = i;
 					l = number;
 				}
-				else if (letter(c)) {
+				else if (Letter(c)) {
 					n = i;
 					l = word;
 				}
@@ -74,16 +65,16 @@ class Translator {
 				break;
 			case(bracket_open):
 				brackets++;
-				lexems.push_back({ bracket_open, '(' });
+				lexems.push_back({ bracket_open, "(" });
 				if (c == '(') {
 					n = i;
 					l = bracket_open;
 				}
-				else if (digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '.' || c == '-') {
 					n = i;
 					l = number;
 				}
-				else if (letter(c)) {
+				else if (Letter(c)) {
 					n = i;
 					l = word;
 				}
@@ -91,57 +82,49 @@ class Translator {
 				break;
 			case(bracket_close):
 				brackets--;
-				lexems.push_back({ bracket_close,')' });
+				lexems.push_back({ bracket_close, ")" });
 				if (c == ')') {
 					n = i;
 					l = bracket_close;
 				}
-				else if (operation(c)) {
+				else if (Operation(c)) {
 					n = i;
 					l = operation;
 				}
 				else throw std::invalid_argument("L user");
 				break;
 			case(word):
-				if (letter(c) || digit(c))
+				if (Letter(c) || Digit(c))
 					continue;
-				std::string lexem(i - n);
-				for (int j = 0; j < i - n - 1; j++) {
-					lexem[j] = infix[n + j];
-				}
-				lexems.push_back({ word, lexem });
-				variables.insert({ lexem, 0.0 });
+				lexems.push_back({ word, infix.substr(n, i - n) });
+				variables.insert({ infix.substr(n, i - n), 0.0 });
 				if (c == ')') {
 					n = i;
 					l = bracket_close;
 				}
-				else if (operation(c)) {
+				else if (Operation(c)) {
 					n = i;
 					l = operation;
 				}
 				else throw std::invalid_argument("L user");
 				break;
 			}
-			std::string lexem(i - n);
-			for (int j = 0; j < i - n - 1; j++) {
-				lexem[j] = infix[n + j];
-			}
-			lexems.push_back({ l, infix[infix.size() - 1] });
-			if (l == ')') brackets--;
-			if (l == '(') throw	std::invalid_argument("L user");
-			if (l == word) variables.insert({ lexem, 0.0 });
-			if (l == operation) throw std::invalid_argument("L user");
-			if (brackets != 0) throw std::invalid_argument("L user");
 		}
+		lexems.push_back( { l,  infix.substr(n, infix.size()-n) } );
+		if (l == bracket_close) brackets--;
+		if (l == bracket_open) throw	std::invalid_argument("L user");
+		if (l == word) variables.insert({ infix.substr(n, infix.size() - n), 0.0 });
+		if (l == operation) throw std::invalid_argument("L user");
+		if (brackets != 0) throw std::invalid_argument("L user");
 	};
 
 	void ToPostfix() {
-		enum lexemType { number, operation, bracket_open, bracket_close, word, begin };
+		DeleteAllSpaces();
 		Parse();
-		TStack<pair<lexemType, std::string>> st;
-		pair<lexemType, std::string> stackItem;
-		for (int i = 0; i < lexems.size(); i++) {
-			pair<lexemType, std::string>  item = lexems[i];
+		TStack<std::pair<lexemType, std::string>> st;
+		std::pair<lexemType, std::string> stackItem;
+		for (int i = 0; i < lexems.get_size(); i++) {
+			std::pair<lexemType, std::string>  item = lexems[i];
 			switch (item.first) {
 			case(bracket_open):
 				st.push(item);
@@ -177,9 +160,7 @@ class Translator {
 
 public:
 	Translator(std::string infix) : infix(infix) {
-		priority = { {'+', 1}, {'-', 1}, {'*', 2}, {'/', 2} };
-		ToPostfix();
-		Calculate();
+		ToPostfix();	
 	};
 
 	std::string GetInfix() {
@@ -187,66 +168,77 @@ public:
 	};
 
 	std::string GetPostfix() {
-		return postfix;
+		std::string res;
+		for (int i = 0; i < postfix.get_size(); i++) {
+			res += postfix[i].second;
+		}
+		return res;
 	};
 
-	void getvariables(istream& input, ostream& output) {
-		output << "Enter values:" << endl;
-		for (auto& o : operands) {
+	void getvariables(std::istream& input, std::ostream& output) {
+		output << "Enter values:" << std::endl;
+		for (auto& o : variables) {
 			output << o.first << " = ";
 			input >> o.second;
 		}
 	}
 
-	T Calculate(const std::map<std::string, T>& values) {
-		//for (auto& val : values) {
-		//	try {
-		//		variables.at(val.first) = val.second;
-		//	}
-		//	catch (std::out_of_range& e) {}
-		//}
-		getvariables();
-		TStack<T> st;
-		T lOp, rOp;
-		for (int i = 0; i < postfix.size(); i++) {
-			pair<lexemType, std::string>  item = postfix[i];
-			switch (item.second[0])
-			{
-			case '+':
-				rOp = st.pop();
-				lOp = st.pop();
-				st.push(lOp + rOp);
-				break;
-			case '-':
-				rOp = st.pop();
-				lOp = st.pop();
-				st.push(lOp - rOp);
-				break;
-			case '*':
-				rOp = st.pop();
-				lOp = st.pop();
-				st.push(lOp * rOp);
-				break;
-			case '/':
-				rOp = st.pop();
-				lOp = st.pop();
-				st.push(lOp / rOp);
-				break;
-			default:
-				if (item.first == letter) st.push(variables[item.second]);
-				else st.push(std::stod(lexem.second));
+	double Calculate(std::istream& input = std::cin, std::ostream& output = std::cout){
+		getvariables(input, output);
+		TStack<double> st;
+		double lOp, rOp;
+		for (int i = 0; i < postfix.get_size(); i++) {
+			std::pair<lexemType, std::string>  item = postfix[i];
+			if (item.first == word) {
+				st.push(variables[item.second]);
+			}
+			else if (item.first == number) {
+				st.push(std::stod(item.second));
+			}
+			else {
+				switch (item.second[0])
+				{
+				case '+':
+					rOp = st.pop();
+					lOp = st.pop();
+					st.push(lOp + rOp);
+					break;
+				case '-':
+					rOp = st.pop();
+					lOp = st.pop();
+					st.push(lOp - rOp);
+					break;
+				case '*':
+					rOp = st.pop();
+					lOp = st.pop();
+					st.push(lOp * rOp);
+					break;
+				case '/':
+					rOp = st.pop();
+					lOp = st.pop();
+					st.push(lOp / rOp);
+					break;
+				}
 			}
 		}
 		return st.top();
 	};
 
-	bool digit(char c) {
+	void DeleteAllSpaces() {
+		std::string res;
+		for (int i = 0; i < infix.size(); i++) {
+			if (infix[i] != ' ') res += infix[i];
+		}
+		infix = res;
+	}
+
+	bool Digit(char c) {
 		return '0' <= c && c <= '9';
 	}
-	bool letter(char c) {
+	bool Letter(char c) {
 		return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_';
 	}
-	bool operation(char c) {
+	bool Operation(char c) {
 		return c == '+' || c == '-' || c == '*' || c == '/';
 	}
 };
