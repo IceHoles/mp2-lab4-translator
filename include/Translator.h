@@ -176,7 +176,7 @@ public:
 	};
 
 	void getvariables(std::istream& input, std::ostream& output) {
-		output << "Enter values:" << std::endl;
+		//output << "Enter values:" << std::endl;
 		for (auto& o : variables) {
 			output << o.first << " = ";
 			input >> o.second;
