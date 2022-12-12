@@ -172,6 +172,13 @@ TEST(Translator, VARIABLE_MULTIPLE_CHARACTERS) {
 	EXPECT_EQ(4.0, s.Calculate(values, p));
 }
 
+TEST(Translator, VARIABLE_MULTIPLE_SAME_CHARACTERS) {
+	Translator s("Aa1*Aa2");
+	std::istringstream values("2 5");
+	std::ostream p(nullptr);
+	EXPECT_EQ(10.0, s.Calculate(values, p));
+}
+
 TEST(Translator, VARIABLE_MULTIPLE_CHARACTERS_COMPLICATED) {
 	Translator s("Aa1+Bb2-(Aa1*Bb2*2-3*Bb2)/(2*Bb2-Aa1)");
 	std::istringstream values("6 7");
@@ -181,6 +188,7 @@ TEST(Translator, VARIABLE_MULTIPLE_CHARACTERS_COMPLICATED) {
 
 TEST(Translator, VARIABLE_MULTIPLE_CHARACTERS_COMPLICATED_SPACES) {
 	Translator s("Aa1      + Bb2  - (  Aa1  *  Bb2* 2-  3* Bb2  ) / (  2 * Bb2 - Aa1  ) ");
+	//std::cout << s.GetPostfix() << std::endl;
 	std::istringstream values("6 7");
 	std::ostream p(nullptr);
 	EXPECT_EQ(5.125, s.Calculate(values, p));
@@ -196,4 +204,79 @@ TEST(Translator, EXCEPTION_BRACKETS_FIRST) {
 
 TEST(Translator, EXCEPTION_BRACKETS_LAST) {
 	ASSERT_ANY_THROW(Translator s("1+2)("););
+}
+
+TEST(Translator, NO_ACTION_NEEDED) {
+	Translator s("0.5");
+	EXPECT_EQ(0.5, s.Calculate());
+}
+
+TEST(Translator, NO_ACTION_NEEDED_POINT){
+	Translator s(".5");
+	EXPECT_EQ(0.5, s.Calculate());
+}
+
+TEST(Translator, SIN) {
+	Translator s("sin(0.5)");
+	EXPECT_EQ(sin(0.5), s.Calculate());
+}
+
+TEST(Translator, COMPLICATED_SIN) {
+	Translator s("sin(Aa1      + Bb2  - (  Aa1  *  Bb2* 2-  3* Bb2  ) / (  2 * Bb2 - Aa1  ) )");
+	//std::cout << s.GetPostfix() << std::endl;
+	std::istringstream values("6 7");
+	std::ostream p(nullptr);
+	EXPECT_EQ(sin(5.125), s.Calculate(values, p));
+}
+
+TEST(Translator, FACTORIAL) {
+	Translator s("4!");
+	EXPECT_EQ(24, s.Calculate());
+}
+
+TEST(Translator, FACTORIAL_VARIABLE) {
+	Translator s("(Aa1!) + 1");
+	std::istringstream values("4");
+	std::ostream p(nullptr);
+	EXPECT_EQ(25, s.Calculate(values, p));
+}
+
+TEST(Translator, POWER) {
+	Translator s("2^8");
+	EXPECT_EQ(256, s.Calculate());
+}
+
+TEST(Translator, POWER_VARIABLE) {
+	Translator s("Aa1^Bb2");
+	std::istringstream values("4 4");
+	std::ostream p(nullptr);
+	EXPECT_EQ(256, s.Calculate(values, p));
+}
+
+TEST(Translator, EXCEPTION_POWER) {
+	ASSERT_ANY_THROW(Translator s("4^"););
+}
+
+TEST(Translator, EXCEPTION_SIN) { 
+	ASSERT_ANY_THROW(Translator s("sin()"););
+}
+
+TEST(Translator, EXCEPTION_COS) { 
+	ASSERT_ANY_THROW(Translator s("cos()"););
+}
+
+TEST(Translator, COMPLICATED_POWER) {
+	Translator s("(Aa1      + Bb2  - (  Aa1  *  Bb2* 2-  3* Bb2  ) / (  2 * Bb2 - Aa1  ) ) ^ ( (2 *  ( Bb2   - Aa1 )) ) - 1");
+	//std::cout << s.GetPostfix() << std::endl;
+	std::istringstream values("6 7");
+	std::ostream p(nullptr);
+	EXPECT_EQ(pow(5.125, 2) - 1, s.Calculate(values, p));
+}
+
+TEST(Translator, COMPLICATED_FACTORIAL) {
+	Translator s("((Aa1      + Bb2  - (  Aa1  *  Bb2* 2-  3* Bb2  ) / (  2 * Bb2 - Aa1  ) -1.125 ) ! ) /6");
+	//std::cout << s.GetPostfix() << std::endl;
+	std::istringstream values("6 7");
+	std::ostream p(nullptr);
+	EXPECT_EQ(4, s.Calculate(values, p));
 }

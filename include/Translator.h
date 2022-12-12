@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <cmath>
 
 
 class Translator {
@@ -10,8 +11,8 @@ class Translator {
 	enum lexemType { number, operation, bracket_open, bracket_close, word, begin };
 	Vector<std::pair<lexemType, std::string>> lexems;
 	Vector<std::pair<lexemType, std::string>> postfix;
-	std::map<std::string, int> priority = { {"+", 1}, {"-", 1}, {"*", 2}, {"/", 2} };
-	std::map<std::string, double> variables;
+	std::map<std::string, int> priority = { {"+", 1}, {"-", 1}, {"*", 2}, {"/", 2}, {"sin", 4}, {"!", 3}, {"^", 3}, {"ln", 4}, {"tg", 4}, {"cos", 4} };
+	std::map<std::string, double> variables = { {"pi", 3.14159265359}, {"Pi", 3.14159265359}, {"PI", 3.14159265359}, {"e", 2.71828182846} };
 
 	void Parse() {
 		lexemType l = begin;
@@ -49,7 +50,11 @@ class Translator {
 				break;
 			case(operation):
 				lexems.push_back({ operation, infix.substr(n, i - n) });
-				if (c == '(') {
+				if (infix.substr(n, i - n) == "!" && c == ')') { 
+					n = i; 
+					l = bracket_close;
+				}
+				else if (c == '(') {
 					n = i;
 					l = bracket_open;
 				}
@@ -96,8 +101,14 @@ class Translator {
 			case(word):
 				if (Letter(c) || Digit(c))
 					continue;
+				if (c == '(') {							  
+					lexems.push_back({ operation, infix.substr(n, i - n) });
+					n = i;
+					l = bracket_open;
+					break;
+				}
 				lexems.push_back({ word, infix.substr(n, i - n) });
-				variables.insert({ infix.substr(n, i - n), 0.0 });
+				variables.insert({ infix.substr(n, i - n), 0.0 });		  
 				if (c == ')') {
 					n = i;
 					l = bracket_close;
@@ -110,11 +121,11 @@ class Translator {
 				break;
 			}
 		}
-		lexems.push_back( { l,  infix.substr(n, infix.size()-n) } );
+		lexems.push_back({ l,  infix.substr(n, infix.size() - n) });
 		if (l == bracket_close) brackets--;
 		if (l == bracket_open) throw	std::invalid_argument("L user");
 		if (l == word) variables.insert({ infix.substr(n, infix.size() - n), 0.0 });
-		if (l == operation) throw std::invalid_argument("L user");
+		if (l == operation && infix.substr(n, infix.size() - n) != "!") throw std::invalid_argument("L user");
 		if (brackets != 0) throw std::invalid_argument("L user");
 	};
 
@@ -137,19 +148,25 @@ class Translator {
 				}
 				break;
 			case(operation):
-				while (!st.empty()) {
-					stackItem = st.pop();
-					if (priority[item.second] <= priority[stackItem.second])
-						postfix.push_back(stackItem);
-					else {
-						st.push(stackItem);
-						break;
+				if (item.second == "!")	{
+					st.push(item);	 
+					break;
+				}
+				else {
+					while (!st.empty()) {
+						stackItem = st.pop();
+						if (priority[item.second] <= priority[stackItem.second])
+							postfix.push_back(stackItem);
+						else {
+							st.push(stackItem);
+							break;
+						}
 					}
 				}
 				st.push(item);
 				break;
 			default:
-				postfix.push_back(item); // stackItem
+				postfix.push_back(item); 
 			}
 		}
 		while (!st.empty()) {
@@ -178,8 +195,10 @@ public:
 	void getvariables(std::istream& input, std::ostream& output) {
 		//output << "Enter values:" << std::endl;
 		for (auto& o : variables) {
-			output << o.first << " = ";
-			input >> o.second;
+			if (o.second == 0.0) {
+				output << o.first << " = ";
+				input >> o.second;
+			}
 		}
 	}
 
@@ -194,6 +213,18 @@ public:
 			}
 			else if (item.first == number) {
 				st.push(std::stod(item.second));
+			}
+			else if (item.second == "sin") {
+				st.push(sin(st.top()));
+			}
+			else if (item.second == "ln") {
+				st.push(log(st.top()));
+			}
+			else if (item.second == "cos") {
+				st.push(cos(st.top()));
+			}
+			else if (item.second == "tg") {
+				st.push(tan(st.top()));
 			}
 			else {
 				switch (item.second[0])
@@ -218,6 +249,14 @@ public:
 					lOp = st.pop();
 					st.push(lOp / rOp);
 					break;
+				case '!':
+					st.push(tgamma(st.top()+1));
+					break;
+				case '^':
+					rOp = st.pop();
+					lOp = st.pop();
+					st.push(pow(lOp, rOp));
+					break;
 				}
 			}
 		}
@@ -239,6 +278,10 @@ public:
 		return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_';
 	}
 	bool Operation(char c) {
-		return c == '+' || c == '-' || c == '*' || c == '/';
+		return c == '+' || c == '-' || c == '*' || c == '/' || c == '!' || c == '^';
+	}
+
+	bool strOperation(std::string str) {
+		return str == "sin";
 	}
 };
