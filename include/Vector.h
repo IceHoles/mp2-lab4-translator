@@ -10,11 +10,7 @@ class Vector {
 public:
 	Vector() :size(0), capacity(0), data(0) {}
 	Vector(size_t n) {
-		data = new T[constant * n];
-		for (size_t i = 0; i < constant * n; i++)
-		{
-			data[i] = 0;
-		}
+		data = new T[constant * n]();
 		capacity = constant * n;
 		size = n;
 	}
@@ -37,11 +33,9 @@ public:
 		}
 		else
 		{
-			T* copy = new T[constant * newSize];
+			T* copy = new T[constant * newSize]();
 			for (size_t i = 0; i < this->size; i++)
 				copy[i] = data[i];
-			for (size_t i = this->size; i < newSize; i++)
-				copy[i] = 0;
 			delete[] this->data;
 			this->data = copy;
 			this->size = newSize;
@@ -111,7 +105,7 @@ public:
 	}
 
 	// test purposes  
-	size_t get_size() const noexcept{
+	size_t get_size() const noexcept {
 		return size;
 	}
 
