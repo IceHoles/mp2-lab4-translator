@@ -11,23 +11,29 @@ class Translator {
 	enum lexemType { number, operation, bracket_open, bracket_close, word, begin };
 	Vector<std::pair<lexemType, std::string>> lexems;
 	Vector<std::pair<lexemType, std::string>> postfix;
-	std::map<std::string, int> priority = { {"+", 1}, {"-", 1}, {"*", 2}, {"/", 2}, {"sin", 4}, {"!", 3}, {"^", 3}, {"ln", 4}, {"tg", 4}, {"cos", 4} };
+	std::map<std::string, int> priority = { {"+", 1}, {"-", 1}, {"*", 2}, {"/", 2}, {"sin", 3}, {"!", 4}, {"^", 4}, {"ln", 3}, {"tg", 3}, {"cos", 3} };
 	std::map<std::string, double> variables = { {"pi", 3.14159265359}, {"Pi", 3.14159265359}, {"PI", 3.14159265359}, {"e", 2.71828182846} };
 
 	void Parse() {
 		lexemType l = begin;
 		int n = 0;
 		int brackets = 0;
+		int dot = 0;
 		for (int i = 0; i < infix.size(); i++) {
 			char c = infix[i];
 			if (c == ' ')  continue;  // this ruins a lot of cases but still
+			if (l != number) dot = 0;
 			switch (l) {
 			case (begin):
 				if (c == '(') {
 					l = bracket_open;
 				}
-				else if (Digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '-') {
 					l = number;
+				}
+				else if (c == '.') {
+					l = number;
+					dot++;
 				}
 				else if (Letter(c)) {
 					l = word;
@@ -35,7 +41,11 @@ class Translator {
 				else throw std::invalid_argument("L user");
 				break;
 			case(number):
-				if (c == '.' || Digit(c))
+				if (c == '.') {
+					dot++;
+					continue;
+				}
+				else if (Digit(c))
 					continue;
 				lexems.push_back({ number, infix.substr(n, i - n) });
 				if (c == ')') {
@@ -58,9 +68,14 @@ class Translator {
 					n = i;
 					l = bracket_open;
 				}
-				else if (Digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '-') {
 					n = i;
 					l = number;
+				}
+				else if (c == '.') {
+					n = i;
+					l = number;
+					dot++;
 				}
 				else if (Letter(c)) {
 					n = i;
@@ -75,9 +90,14 @@ class Translator {
 					n = i;
 					l = bracket_open;
 				}
-				else if (Digit(c) || c == '.' || c == '-') {
+				else if (Digit(c) || c == '-') {
 					n = i;
 					l = number;
+				}
+				else if (c == '.') {
+					n = i;
+					l = number;
+					dot++;
 				}
 				else if (Letter(c)) {
 					n = i;
@@ -122,6 +142,7 @@ class Translator {
 			}
 		}
 		lexems.push_back({ l,  infix.substr(n, infix.size() - n) });
+		if (dot > 1) throw std::invalid_argument("L user");
 		if (l == bracket_close) brackets--;
 		if (l == bracket_open) throw	std::invalid_argument("L user");
 		if (l == word) variables.insert({ infix.substr(n, infix.size() - n), 0.0 });
@@ -247,6 +268,7 @@ public:
 				case '/':
 					rOp = st.pop();
 					lOp = st.pop();
+					if (rOp == 0) throw std::invalid_argument("L user");
 					st.push(lOp / rOp);
 					break;
 				case '!':
@@ -279,9 +301,5 @@ public:
 	}
 	bool Operation(char c) {
 		return c == '+' || c == '-' || c == '*' || c == '/' || c == '!' || c == '^';
-	}
-
-	bool strOperation(std::string str) {
-		return str == "sin";
 	}
 };

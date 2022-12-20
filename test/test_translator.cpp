@@ -280,3 +280,20 @@ TEST(Translator, COMPLICATED_FACTORIAL) {
 	std::ostream p(nullptr);
 	EXPECT_EQ(4, s.Calculate(values, p));
 }
+
+TEST(Translator, DIVIDE_ZERO) {
+	Translator s("0/3");
+	EXPECT_EQ(0, s.Calculate());
+}
+
+TEST(Translator, DIVIDE_BY_ZERO) {
+	Translator s("3/0");
+	ASSERT_ANY_THROW(s.Calculate());
+}
+
+TEST(Translator, VARIABLE_ZERO) {
+	Translator s("Aa1-Bb2");
+	std::istringstream values("0.0 0.0");
+	std::ostream p(nullptr);
+	EXPECT_EQ(0, s.Calculate(values, p));
+}
